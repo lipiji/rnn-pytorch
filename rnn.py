@@ -1,0 +1,48 @@
+#pylint: skip-file
+import numpy as np
+
+import torch
+import torch.nn as nn
+from torch.autograd import Variable
+
+class RNN(nn.Module):
+    def __init__(self, out_size, hidden_size, batch_size, dim_w, dict_size, cell = "gru", num_layers = 1):
+        super(RNN, self).__init__()
+        self.in_size = dim_w
+        self.out_size = out_size
+        self.hidden_size = hidden_size
+        self.cell = cell.lower()
+        self.batch_size = batch_size
+        self.dict_size = dict_size
+        self.dim_w = dim_w
+        self.num_layers = num_layers
+        
+        self.raw_emb = nn.Embedding(self.dict_size, self.dim_w)
+        if self.cell == "gru":
+            self.rnn_model = nn.GRU(self.in_size, self.hidden_size)
+        elif self.cell == "lstm":
+            self.rnn_model = nn.LSTM(self.in_size, self.hidden_size)
+        self.linear = nn.Linear(self.hidden_size, self.out_size)
+    
+        #self.init_weights()
+
+    def init_weights(self):
+        initrange = 0.1
+        self.raw_emb.weight.data.uniform_(-initrange, initrange)
+        self.linear.bias.data.zero_()
+        self.linear.weight.data.uniform_(-initrange, initrange)
+
+    def forward(self, x, hidden=None):
+        self.rnn_model.flatten_parameters()
+
+        emb_x = self.raw_emb(x)
+        hs, hn = self.rnn_model(emb_x, hidden)
+        output = self.linear(hs) 
+        return output, hn
+    
+    def init_hidden(self, batch_size):
+        if self.cell == "lstm":
+            return (Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size)),
+                    Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size)))
+        return Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size))
+
