@@ -109,7 +109,7 @@ def generate(model, prime_str='r', predict_len=100, temperature=0.8, cuda=use_cu
 
     return predicted
 
-
+print "Testing..."
 print "load model..."
 model = torch.load(filepath)
 #model.load_state_dict(torch.load(filepath))
