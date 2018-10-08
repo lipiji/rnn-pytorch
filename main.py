@@ -32,10 +32,13 @@ print "dict_size=", dict_size, "#batchs=", num_batches, "#batch_size", batch_siz
 print "compiling..."
 model = RNN(dict_size, hidden_size, batch_size, emb_size, dict_size, cell)
 optimizer = torch.optim.Adadelta(model.parameters(), lr=lr)
-criterion = nn.CrossEntropyLoss()
+
+weight = torch.ones(dict_size)
+weight[0] = 0.0
 if use_cuda:
     model.cuda()
-
+    weight = weight.cuda()
+criterion = nn.CrossEntropyLoss(weight)
 #def train(x, y):
 
 print "training..."
@@ -55,10 +58,16 @@ for i in xrange(100):
         len_x -= 1
         local_batch_size = len(batch_raw)
         batch = data.get_data(batch_raw, len_x, w2i, i2w)
+        sorted_x_idx = np.argsort(batch.x_len)[::-1]
+        sorted_x_len = np.array(batch.x_len)[sorted_x_idx]
+        sorted_x = batch.x[:, sorted_x_idx]
+
+        sorted_y_len = np.array(batch.y_len)[sorted_x_idx]
+        sorted_y = batch.y[:, sorted_x_idx]
 
         model.zero_grad()
-        out, hn = model(torch.LongTensor(batch.x).to(device))
-        cost = criterion(out.view(-1, len(w2i)), torch.LongTensor(batch.y).view(-1).cuda())
+        out, hn = model(torch.LongTensor(sorted_x).to(device), torch.LongTensor(sorted_x_len).to(device))
+        cost = criterion(out.view(-1, len(w2i)), torch.LongTensor(sorted_y).contiguous().view(-1).cuda())
         cost.backward()
         optimizer.step()
 
@@ -85,13 +94,16 @@ torch.save(model, filepath)
 def generate(model, prime_str='r', predict_len=100, temperature=0.8, cuda=use_cuda):
     x = np.zeros((1, 1), dtype = np.int64)
     x[0, 0] = w2i[prime_str]
+    len_x = [1]
     x = torch.LongTensor(x)
+    len_x = torch.LongTensor(len_x)
     if cuda:
         x = x.cuda()
+        len_x = len_x.cuda()
     hidden = None
     predicted = prime_str 
     for p in range(predict_len):
-        output, hidden = model(x, hidden)
+        output, hidden = model(x, len_x, hidden)
         
         output_dist = output.data.view(-1).div(temperature).exp()
         top_i = torch.multinomial(output_dist, 1).item()

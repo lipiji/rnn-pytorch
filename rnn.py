@@ -17,7 +17,7 @@ class RNN(nn.Module):
         self.dim_w = dim_w
         self.num_layers = num_layers
         
-        self.raw_emb = nn.Embedding(self.dict_size, self.dim_w)
+        self.raw_emb = nn.Embedding(self.dict_size, self.dim_w, 0)
         if self.cell == "gru":
             self.rnn_model = nn.GRU(self.in_size, self.hidden_size)
         elif self.cell == "lstm":
@@ -32,11 +32,13 @@ class RNN(nn.Module):
         self.linear.bias.data.zero_()
         self.linear.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, x, hidden=None):
+    def forward(self, x, len_x, hidden=None):
         self.rnn_model.flatten_parameters()
 
         emb_x = self.raw_emb(x)
+        emb_x = torch.nn.utils.rnn.pack_padded_sequence(emb_x, len_x)
         hs, hn = self.rnn_model(emb_x, hidden)
+        hs, _ = torch.nn.utils.rnn.pad_packed_sequence(hs)
         output = self.linear(hs) 
         return output, hn
     
