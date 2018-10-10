@@ -12,7 +12,7 @@ import data
 
 use_gpu = True
 
-local_rnn = False # true: lstm.py; false: nn.LSTM
+local_rnn = True # true: lstm.py; false: nn.LSTM
 
 lr = 1
 drop_rate = 0.
@@ -53,7 +53,7 @@ if use_cuda:
         hidden = (hidden[0].cuda(), hidden[1].cuda())
 
 start = time.time()
-for i in xrange(20):
+for i in xrange(10):
     error = 0.0    
     in_start = time.time()
     for idx_batch in xrange(num_batches):

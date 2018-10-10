@@ -62,7 +62,7 @@ class LSTM(nn.Module):
                 hidden = recurrence(X_4ifoc[i], hidden)
             hiddens.append(hidden[0])
 
-        hiddens = torch.FloatTensor(hiddens).view(X.size(0), *hiddens[0].size())
+        hiddens = torch.cat(hiddens, 0).view(X.size(0), *hiddens[0].size())
         return hiddens, hidden
 
 
