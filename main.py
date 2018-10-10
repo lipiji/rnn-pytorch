@@ -12,11 +12,13 @@ import data
 
 use_gpu = True
 
+local_rnn = False # true: lstm.py; false: nn.LSTM
+
 lr = 1
 drop_rate = 0.
-batch_size = 3
-hidden_size = 100
-emb_size = 200
+batch_size = 128
+hidden_size = 500
+emb_size = 300
 cell = "lstm"
 
 use_cuda = use_gpu and torch.cuda.is_available()
@@ -24,13 +26,13 @@ device = torch.device("cuda" if use_cuda else "cpu")
 
 dtype = torch.FloatTensor
 
-xy_list, i2w, w2i, batch_list = data.char_sequence("/data/toy.txt", batch_size)
+xy_list, i2w, w2i, batch_list = data.char_sequence("/data/shakespeare.txt", batch_size)
 dict_size = len(w2i)
 num_batches = len(batch_list)
 print "dict_size=", dict_size, "#batchs=", num_batches, "#batch_size", batch_size
 
 print "compiling..."
-model = RNN(dict_size, hidden_size, batch_size, emb_size, dict_size, cell)
+model = RNN(dict_size, hidden_size, batch_size, emb_size, dict_size, local_rnn, cell)
 optimizer = torch.optim.Adadelta(model.parameters(), lr=lr)
 
 weight = torch.ones(dict_size)
@@ -41,9 +43,17 @@ if use_cuda:
 criterion = nn.CrossEntropyLoss(weight)
 #def train(x, y):
 
+
 print "training..."
+hidden = model.init_hidden(batch_size)
+if use_cuda:
+    if model.cell == "gru":
+        hidden = hidden.cuda()
+    else:
+        hidden = (hidden[0].cuda(), hidden[1].cuda())
+
 start = time.time()
-for i in xrange(100):
+for i in xrange(20):
     error = 0.0    
     in_start = time.time()
     for idx_batch in xrange(num_batches):
@@ -61,12 +71,14 @@ for i in xrange(100):
         sorted_x_idx = np.argsort(batch.x_len)[::-1]
         sorted_x_len = np.array(batch.x_len)[sorted_x_idx]
         sorted_x = batch.x[:, sorted_x_idx]
+        sorted_x_mask = batch.x_mask[:, sorted_x_idx]
 
         sorted_y_len = np.array(batch.y_len)[sorted_x_idx]
         sorted_y = batch.y[:, sorted_x_idx]
 
         model.zero_grad()
-        out, hn = model(torch.LongTensor(sorted_x).to(device), torch.LongTensor(sorted_x_len).to(device))
+        out, hn = model(torch.LongTensor(sorted_x).to(device), torch.LongTensor(sorted_x_len).to(device), \
+                        hidden, torch.FloatTensor(sorted_x_mask).to(device))
         cost = criterion(out.view(-1, len(w2i)), torch.LongTensor(sorted_y).contiguous().view(-1).cuda())
         cost.backward()
         optimizer.step()
@@ -98,20 +110,12 @@ def generate(model, prime_str='r', predict_len=100, temperature=0.8, cuda=use_cu
     x = torch.LongTensor(x)
     len_x = torch.LongTensor(len_x)
     if cuda:
-        x = x.cuda()
         len_x = len_x.cuda()
-    hidden = None
     predicted = prime_str 
-    for p in range(predict_len):
-        output, hidden = model(x, len_x, hidden)
-        
-        output_dist = output.data.view(-1).div(temperature).exp()
-        top_i = torch.multinomial(output_dist, 1).item()
+    
+    hidden = model.init_hidden(1)
 
-        predicted_char = i2w[top_i]
-        predicted += predicted_char
-        x[0, 0] = top_i
-        #x = torch.LongTensor(x)
+    for p in range(predict_len):
         if cuda:
             x = x.cuda()
             if model.cell == "gru":
@@ -119,6 +123,15 @@ def generate(model, prime_str='r', predict_len=100, temperature=0.8, cuda=use_cu
             else:
                 hidden = (hidden[0].cuda(), hidden[1].cuda())
 
+        output, hidden = model(x, len_x, hidden)
+       
+        output_dist = output.data.view(-1).div(temperature).exp()
+        top_i = torch.multinomial(output_dist, 1).item()
+
+        predicted_char = i2w[top_i]
+        predicted += predicted_char
+        x[0, 0] = top_i
+        #x = torch.LongTensor(x)
     return predicted
 
 print "Testing..."
