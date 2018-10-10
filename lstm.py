@@ -60,12 +60,9 @@ class LSTM(nn.Module):
                 hidden = recurrence(X_4ifoc[i], hidden, mask[i])
             else:
                 hidden = recurrence(X_4ifoc[i], hidden)
-            if isinstance(hidden, tuple):
-                hiddens.append(hidden[0])
-            else:
-                hiddens.append(hidden)
+            hiddens.append(hidden[0])
 
-        hiddens = torch.cat(hiddens, 0).view(X.size(0), *hiddens[0].size())
+        hiddens = torch.FloatTensor(hiddens).view(X.size(0), *hiddens[0].size())
         return hiddens, hidden
 
 
