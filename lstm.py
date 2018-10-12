@@ -19,12 +19,12 @@ class LSTM(nn.Module):
         self.init_parameters()
 
     def init_parameters(self):
-        stdv = 1.0 / math.sqrt(self.hidden_size)
+        #stdv = 1.0 / math.sqrt(self.hidden_size)
 
-        self.W_x_ifoc.data.uniform_(-stdv, stdv)
-        self.W_h_ifoc.data.uniform_(-stdv, stdv)
-        self.W_c_if.data.uniform_(-stdv, stdv)
-        self.W_c_o.data.uniform_(-stdv, stdv)
+        nn.init.orthogonal_(self.W_x_ifoc)
+        nn.init.orthogonal_(self.W_h_ifoc)
+        nn.init.orthogonal_(self.W_c_if)
+        nn.init.orthogonal_(self.W_c_o)
         self.b_ifoc.data.fill_(0)
 
     def forward(self, X, hidden, mask = None):

@@ -53,7 +53,7 @@ if use_cuda:
         hidden = (hidden[0].cuda(), hidden[1].cuda())
 
 start = time.time()
-for i in xrange(10):
+for i in xrange(100):
     error = 0.0    
     in_start = time.time()
     for idx_batch in xrange(num_batches):
@@ -103,7 +103,7 @@ torch.save(model, filepath)
 #torch.save(model.state_dict(), filepath)
     
 
-def generate(model, prime_str='r', predict_len=100, temperature=0.8, cuda=use_cuda):
+def generate(model, prime_str='t', predict_len=1000, temperature=0.8, cuda=use_cuda):
     x = np.zeros((1, 1), dtype = np.int64)
     x[0, 0] = w2i[prime_str]
     len_x = [1]
