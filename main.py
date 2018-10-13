@@ -12,14 +12,14 @@ import data
 
 use_gpu = True
 
-local_rnn = True # true: lstm.py; false: nn.LSTM
+local_rnn = False # true: lstm.py; false: nn.LSTM
 
 lr = 1
 drop_rate = 0.
 batch_size = 128
 hidden_size = 500
 emb_size = 300
-cell = "lstm"
+cell = "gru"
 
 use_cuda = use_gpu and torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
@@ -103,14 +103,18 @@ torch.save(model, filepath)
 #torch.save(model.state_dict(), filepath)
     
 
-def generate(model, prime_str='t', predict_len=1000, temperature=0.8, cuda=use_cuda):
+def generate(model, prime_str='t', predict_len=100, temperature=0.8, cuda=use_cuda):
     x = np.zeros((1, 1), dtype = np.int64)
+    x_mask = np.zeros((1, 1))
     x[0, 0] = w2i[prime_str]
+    x_mask[0, 0] = 1
     len_x = [1]
     x = torch.LongTensor(x)
+    x_mask = torch.FloatTensor(x_mask)
     len_x = torch.LongTensor(len_x)
     if cuda:
         len_x = len_x.cuda()
+        x_mask = x_mask.cuda()
     predicted = prime_str 
     
     hidden = model.init_hidden(1)
@@ -123,7 +127,7 @@ def generate(model, prime_str='t', predict_len=1000, temperature=0.8, cuda=use_c
             else:
                 hidden = (hidden[0].cuda(), hidden[1].cuda())
 
-        output, hidden = model(x, len_x, hidden)
+        output, hidden = model(x, len_x, hidden, x_mask)
        
         output_dist = output.data.view(-1).div(temperature).exp()
         top_i = torch.multinomial(output_dist, 1).item()
@@ -139,6 +143,6 @@ print "load model..."
 model = torch.load(filepath)
 #model.load_state_dict(torch.load(filepath))
     
-print generate(model)
+print generate(model, prime_str='t', predict_len=2000)
 
 

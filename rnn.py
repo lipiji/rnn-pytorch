@@ -5,6 +5,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 from lstm import *
+from gru import *
 
 class RNN(nn.Module):
     def __init__(self, out_size, hidden_size, batch_size, dim_w, dict_size, local_rnn = False, cell = "gru", num_layers = 1):
@@ -21,7 +22,10 @@ class RNN(nn.Module):
 
         self.raw_emb = nn.Embedding(self.dict_size, self.dim_w, 0)
         if self.cell == "gru":
-            self.rnn_model = nn.GRU(self.in_size, self.hidden_size)
+            if self.local_rnn: 
+                self.rnn_model = GRU(self.in_size, self.hidden_size)
+            else:
+                self.rnn_model = nn.GRU(self.in_size, self.hidden_size)
         elif self.cell == "lstm":
             if self.local_rnn:
                 self.rnn_model = LSTM(self.in_size, self.hidden_size)
