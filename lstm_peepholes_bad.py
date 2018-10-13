@@ -12,6 +12,8 @@ class LSTM(nn.Module):
 
         self.W_x_ifoc = nn.Parameter(torch.Tensor(4 * self.hidden_size, self.input_size))
         self.W_h_ifoc = nn.Parameter(torch.Tensor(4 * self.hidden_size, self.hidden_size))
+        self.W_c_if = nn.Parameter(torch.Tensor(2 * self.hidden_size, self.hidden_size))
+        self.W_c_o = nn.Parameter(torch.Tensor(self.hidden_size, self.hidden_size))
         self.b_ifoc = nn.Parameter(torch.Tensor(4 * self.hidden_size))
 
         self.init_parameters()
@@ -19,6 +21,8 @@ class LSTM(nn.Module):
     def init_parameters(self):
         nn.init.orthogonal_(self.W_x_ifoc)
         nn.init.orthogonal_(self.W_h_ifoc)
+        nn.init.orthogonal_(self.W_c_if)
+        nn.init.orthogonal_(self.W_c_o)
         self.b_ifoc.data.fill_(0)
 
     def forward(self, X, hidden, mask = None):
@@ -29,12 +33,15 @@ class LSTM(nn.Module):
             pre_c = pre_c.view(-1, self.hidden_size)
             
             ifoc_preact = x_4ifoc + F.linear(pre_h, self.W_h_ifoc)
+            c_if_preact = F.linear(pre_c, self.W_c_if)
 
-            x4i, x4f, x4o, x4c = ifoc_preact.chunk(4, 1)
-            i = torch.sigmoid(x4i)
-            f = torch.sigmoid(x4f)
-            o = torch.sigmoid(x4o)
-            c = f * pre_c + i * torch.tanh(x4c)
+            x4i, x4f, x4c, x4o = ifoc_preact.chunk(4, 1)
+            c4i, c4f = c_if_preact.chunk(2, 1)
+            i = torch.sigmoid(x4i + c4i)
+            f = torch.sigmoid(x4f + c4f)
+            gc = torch.tanh(x4c)
+            c = f * pre_c + i * gc
+            o = torch.sigmoid(x4o + F.linear(c, self.W_c_o))
             h = o * torch.tanh(c)
             
             if m is not None:
@@ -55,5 +62,6 @@ class LSTM(nn.Module):
 
         hiddens = torch.cat(hiddens, 0).view(X.size(0), *hiddens[0].size())
         return hiddens, hidden
+
 
 

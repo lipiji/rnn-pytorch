@@ -5,6 +5,8 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 from lstm import *
+#from lstm_peepholes import *
+#from lstm_peepholes_bad import *
 from gru import *
 
 class RNN(nn.Module):

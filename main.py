@@ -12,14 +12,14 @@ import data
 
 use_gpu = True
 
-local_rnn = False # true: lstm.py; false: nn.LSTM
+local_rnn = True # true: lstm.py; false: nn.LSTM
 
 lr = 1
 drop_rate = 0.
 batch_size = 128
 hidden_size = 500
 emb_size = 300
-cell = "gru"
+cell = "lstm"
 
 use_cuda = use_gpu and torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")

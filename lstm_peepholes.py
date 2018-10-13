@@ -28,7 +28,7 @@ class LSTM(nn.Module):
             pre_h = pre_h.view(-1, self.hidden_size)
             pre_c = pre_c.view(-1, self.hidden_size)
             
-            ifoc_preact = x_4ifoc + F.linear(pre_h, self.W_h_ifoc)
+            ifoc_preact = x_4ifoc + F.linear(pre_c, self.W_h_ifoc)
 
             x4i, x4f, x4o, x4c = ifoc_preact.chunk(4, 1)
             i = torch.sigmoid(x4i)
@@ -55,5 +55,6 @@ class LSTM(nn.Module):
 
         hiddens = torch.cat(hiddens, 0).view(X.size(0), *hiddens[0].size())
         return hiddens, hidden
+
 
 
