@@ -12,7 +12,7 @@ import data
 
 use_gpu = True
 
-local_rnn = True # true: lstm.py; false: nn.LSTM
+local_rnn = False # true: lstm.py; false: nn.LSTM
 
 lr = 1
 drop_rate = 0.
@@ -99,8 +99,9 @@ print "save model..."
 if not os.path.exists("./model/"):
     os.makedirs("./model/")
 filepath = "./model/char_rnn.model"
-torch.save(model, filepath)
-#torch.save(model.state_dict(), filepath)
+torch.save({"model_state_dict" : model.state_dict(),
+            "optimizer_state_dict" : optimizer.state_dict()},
+            filepath)
     
 
 def generate(model, prime_str='t', predict_len=100, temperature=0.8, cuda=use_cuda):
@@ -140,9 +141,10 @@ def generate(model, prime_str='t', predict_len=100, temperature=0.8, cuda=use_cu
 
 print "Testing..."
 print "load model..."
-model = torch.load(filepath)
-#model.load_state_dict(torch.load(filepath))
-    
+checkpoint = torch.load(filepath)
+model.load_state_dict(checkpoint["model_state_dict"])
+optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+
 print generate(model, prime_str='t', predict_len=2000)
 
 
